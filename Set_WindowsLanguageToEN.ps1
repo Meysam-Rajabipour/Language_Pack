@@ -1,7 +1,7 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in $Path1
-# Versie: 1.0.8
+# Versie: 1.0.9
 <#
 .SYNOPSIS
     Downloads en-US language pack and Feature on Demand (FoD) .cab files from a GitHub repository to C:\Temp\EN-US.
@@ -43,17 +43,37 @@ if (-not (Test-Path $RepositoryPath)) {
 }
 
 # Define .cab files to download
-$cabFiles = @(
-    "Microsoft-Windows-Client-Language-Pack_x64_en-us.cab",
-    "Microsoft-Windows-LanguageFeatures-Basic-en-us-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-Handwriting-en-us-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-OCR-en-us-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-Speech-en-us-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-TextToSpeech-en-us-Package~31bf3856ad364e35~amd64~~.cab"
-)
-
 try {
-    # Download .cab files from GitHub
+    # Download ListCabfiles.txt
+    Write-Host "`nDownloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
+    $listUrl = "$GitHubRepoUrl/ListCabfiles.txt"
+    try {
+        Invoke-WebRequest -Uri $listUrl -OutFile $listFilePath -ErrorAction Stop
+        Write-Host "Downloaded ListCabfiles.txt successfully to $listFilePath." -ForegroundColor Green
+        "Downloaded ListCabfiles.txt successfully to $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+    } catch {
+        Write-Error "Failed to download ListCabfiles.txt from $listUrl. Error: $_"
+        "Failed to download ListCabfiles.txt from $listUrl. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        exit 1
+    }
+
+    # Read .cab file names from ListCabfiles.txt
+    if (Test-Path $listFilePath) {
+        $cabFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" } | ForEach-Object { $_.Trim() }
+        if (-not $cabFiles) {
+            Write-Error "No .cab files listed in ListCabfiles.txt or file is empty."
+            "No .cab files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            exit 1
+        }
+        Write-Host "Found $($cabFiles.Count) .cab files in ListCabfiles.txt:" -ForegroundColor Green
+        $cabFiles | ForEach-Object { Write-Host $_ }
+    } else {
+        Write-Error "ListCabfiles.txt not found at $listFilePath."
+        "ListCabfiles.txt not found at $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        exit 1
+    }
+
+    # Download .cab files listed in ListCabfiles.txt
     Write-Host "`nDownloading .cab files from GitHub repository..." -ForegroundColor Yellow
     foreach ($cabFile in $cabFiles) {
         $url = "$GitHubRepoUrl/$cabFile"
@@ -61,8 +81,8 @@ try {
         Write-Host "Downloading $cabFile from $url..."
         try {
             Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-            Write-Host "`nDownloaded $cabFile successfully to `n$outputPath." -ForegroundColor Green
-            "`nDownloaded $cabFile successfully to `n $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            Write-Host "Downloaded $cabFile successfully to $outputPath." -ForegroundColor Green
+            "Downloaded $cabFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
         } catch {
             Write-Warning "Failed to download $cabFile from $url. Error: $_"
             "Failed to download $cabFile from $url. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
@@ -73,7 +93,7 @@ try {
     Write-Host "`nVerifying downloaded files..." -ForegroundColor Yellow
     $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.cab"
     if ($downloadedFiles.Count -gt 0) {
-        Write-Host "Downloaded files:" -ForegroundColor Green
+        Write-Host "`nDownloaded files:" -ForegroundColor Green
         $downloadedFiles | ForEach-Object { Write-Host $_.Name }
         "Verified $($downloadedFiles.Count) .cab files in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     } else {
