@@ -1,7 +1,7 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in $Path1
-# Versie: 1.0.7
+# Versie: 1.0.8
 <#
 .SYNOPSIS
     Downloads en-US language pack and Feature on Demand (FoD) .cab files from a GitHub repository to C:\Temp\EN-US.
@@ -61,8 +61,8 @@ try {
         Write-Host "Downloading $cabFile from $url..."
         try {
             Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-            Write-Host "`nDownloaded $cabFile successfully to $outputPath." -ForegroundColor Green
-            "`nDownloaded $cabFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            Write-Host "`nDownloaded $cabFile successfully to `n$outputPath." -ForegroundColor Green
+            "`nDownloaded $cabFile successfully to `n $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
         } catch {
             Write-Warning "Failed to download $cabFile from $url. Error: $_"
             "Failed to download $cabFile from $url. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
