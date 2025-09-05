@@ -1,7 +1,7 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in $Path1
-# Versie: 1.0.9
+# Versie: 1.0.9V001
 <#
 .SYNOPSIS
     Downloads en-US language pack and Feature on Demand (FoD) .cab files from a GitHub repository to C:\Temp\EN-US.
@@ -33,7 +33,7 @@ param (
 Write-Host "Starting .cab file download for en-US language pack..." -ForegroundColor Cyan
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
-
+$listFilePath = Join-Path $Path1 "ListCabfiles.txt"
 # Ensure log and download directories exist
 if (-not (Test-Path $Path1)) {
     New-Item -Path $Path1 -ItemType Directory -Force
