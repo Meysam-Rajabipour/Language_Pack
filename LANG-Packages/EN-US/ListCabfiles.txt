@@ -5,7 +5,6 @@ Microsoft-Windows-LanguageFeatures-Handwriting-en-us-Package~31bf3856ad364e35~am
 Microsoft-Windows-LanguageFeatures-OCR-en-us-Package~31bf3856ad364e35~amd64~~.cab
 Microsoft-Windows-LanguageFeatures-Speech-en-us-Package~31bf3856ad364e35~amd64~~.cab
 Microsoft-Windows-LanguageFeatures-TextToSpeech-en-us-Package~31bf3856ad364e35~amd64~~.cab
-TEST-Push.txt
 winpe-appxdeployment_en-us.cab
 winpe-appxpackaging_en-us.cab
 winpe-arm64ec-support_en-us.cab
