@@ -49,7 +49,7 @@ try {
     $listUrl = "$GitHubRepoUrl/ListCabfiles.txt"
     try {
         Invoke-WebRequest -Uri $listUrl -OutFile $listFilePath -ErrorAction Stop
-        Write-Host "Downloaded ListCabfiles.txt successfully to $listFilePath." -ForegroundColor Green
+        Write-Host "`nDownloaded ListCabfiles.txt successfully to $listFilePath." -ForegroundColor Green
         "Downloaded ListCabfiles.txt successfully to $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     } catch {
         Write-Error "Failed to download ListCabfiles.txt from $listUrl. Error: $_"
