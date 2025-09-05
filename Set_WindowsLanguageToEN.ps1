@@ -1,15 +1,14 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V003
+# Versie: 1.0.9V004
 <#
 .SYNOPSIS
-    Downloads and applies en-US language pack and FoD .cab files from GitHub based on ListCabfiles.txt.
+    Downloads en-US language pack and FoD .cab files from GitHub based on ListCabfiles.txt, skipping existing files.
 
 .DESCRIPTION
-    Downloads ListCabfiles.txt from GitHub, downloads listed .cab files to C:\Temp\EN-US, checks if packages
-    are already installed, installs missing packages using DISM, verifies installation, and applies en-US
-    language settings. Logs to C:\Temp\LanguageDownloadLog.txt. Requires a restart.
+    Downloads ListCabfiles.txt from GitHub, reads .cab file names, downloads only files not already in C:\Temp\EN-US,
+    installs and verifies packages, and applies en-US language settings. Logs to C:\Temp\LanguageDownloadLog.txt.
 
 .PARAMETER RepositoryPath
     Local path to save and use .cab files (default: C:\Temp\EN-US).
@@ -70,11 +69,17 @@ try {
         exit 1
     }
 
-    # Download .cab files listed in ListCabfiles.txt
+    # Download .cab files listed in ListCabfiles.txt, skipping existing files
     Write-Host "`n[Step 2/5] Downloading .cab files from GitHub repository..." -ForegroundColor Yellow
     foreach ($cabFile in $cabFiles) {
-        $url = "$GitHubRepoUrl/$cabFile"
         $outputPath = Join-Path $RepositoryPath $cabFile
+        if (Test-Path $outputPath) {
+            Write-Host "$cabFile already exists in $RepositoryPath. Skipping download." -ForegroundColor Green
+            "$cabFile already exists in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            continue
+        }
+
+        $url = "$GitHubRepoUrl/$cabFile"
         Write-Host "Downloading $cabFile from $url..."
         try {
             Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
@@ -192,6 +197,8 @@ catch {
     Write-Host "Check $logPath for details." -ForegroundColor Yellow
     exit 1
 }
+
+
 Install-language -language $LangCode
 #Install-languagefeatures -language $LangCode
 Write-Host "`nLanguage pack installation process completed. Check $logPath for details." -ForegroundColor Cyan
