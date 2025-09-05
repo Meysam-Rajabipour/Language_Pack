@@ -61,8 +61,8 @@ try {
         Write-Host "Downloading $cabFile from $url..."
         try {
             Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-            Write-Host "Downloaded $cabFile successfully to $outputPath." -ForegroundColor Green
-            "Downloaded $cabFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            Write-Host "`nDownloaded $cabFile successfully to $outputPath." -ForegroundColor Green
+            "`nDownloaded $cabFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
         } catch {
             Write-Warning "Failed to download $cabFile from $url. Error: $_"
             "Failed to download $cabFile from $url. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
@@ -104,12 +104,12 @@ if (-not (Test-Path $Path1)) {
 
 # Define .cab files
 $cabFiles = @(
-    "Microsoft-Windows-Client-Language-Pack_x64_$LangCode.cab",
-    "Microsoft-Windows-LanguageFeatures-Basic-$LangCode-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-Handwriting-$LangCode-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-OCR-$LangCode-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-Speech-$LangCode-Package~31bf3856ad364e35~amd64~~.cab",
-    "Microsoft-Windows-LanguageFeatures-TextToSpeech-$LangCode-Package~31bf3856ad364e35~amd64~~.cab"
+    "Microsoft-Windows-Client-Language-Pack_x64_en-us.cab",
+    "Microsoft-Windows-LanguageFeatures-Basic-en-us-Package~31bf3856ad364e35~amd64~~.cab",
+    "Microsoft-Windows-LanguageFeatures-Handwriting-en-us-Package~31bf3856ad364e35~amd64~~.cab",
+    "Microsoft-Windows-LanguageFeatures-OCR-en-us-Package~31bf3856ad364e35~amd64~~.cab",
+    "Microsoft-Windows-LanguageFeatures-Speech-en-us-Package~31bf3856ad364e35~amd64~~.cab",
+    "Microsoft-Windows-LanguageFeatures-TextToSpeech-en-us-Package~31bf3856ad364e35~amd64~~.cab"
 )
 
 
@@ -119,13 +119,13 @@ try {
     foreach ($cabFile in $cabFiles) {
         $filePath = Join-Path $RepositoryPath $cabFile
         if (Test-Path $filePath) {
-            $dismCommand = "DISM /Online /Add-Package /PackagePath:`"$filePath`" /NoRestart /LogPath:`"$logPath`""
-            Write-Host "Executing: $dismCommand"
+            $dismCommand = "DISM /Online /Add-Package /PackagePath:`"$filePath`"  /LogPath:`"$logPath`""
+            Write-Host "`nExecuting: $dismCommand"
             Invoke-Expression $dismCommand | Out-File -FilePath $logPath -Append
             if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Failed to install $cabFile with error code $LASTEXITCODE."
+                Write-Warning "`nFailed to install $cabFile with error code $LASTEXITCODE."
             } else {
-                Write-Host "$cabFile installed successfully." -ForegroundColor Green
+                Write-Host "$cabFile `ninstalled successfully." -ForegroundColor Green
             }
         } else {
             Write-Warning "$cabFile not found in $RepositoryPath."
@@ -136,7 +136,7 @@ try {
     $langGroup = if ($LangCode -eq "en-US") { "Latn" } else { "" }
     if ($langGroup) {
         $dismCommand = "DISM /Online /Add-Capability /CapabilityName:Language.Fonts.$langGroup~~~und-$langGroup~0.0.1.0 /Source:`"$RepositoryPath`" /NoRestart /LogPath:`"$logPath`""
-        Write-Host "Executing: $dismCommand"
+        Write-Host "`nExecuting: $dismCommand"
         Invoke-Expression $dismCommand | Out-File -FilePath $logPath -Append
         if ($LASTEXITCODE -ne 0) {
             Write-Warning "Failed to install font group $langGroup with error code $LASTEXITCODE."
