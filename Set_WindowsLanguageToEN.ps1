@@ -55,14 +55,14 @@ try {
 
     # Read .cab file names from ListCabfiles.txt
     if (Test-Path $listFilePath) {
-        $cabFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
-        if (-not $cabFiles) {
-            Write-Error "No .cab files listed in ListCabfiles.txt or file is empty."
-            "No .cab files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
+        if (-not $packageFiles) {
+            Write-Error "No .cab or .Appx files listed in ListCabfiles.txt or file is empty."
+            "No .cab or .Appx files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
             exit 1
         }
-        Write-Host "Found $($cabFiles.Count) .cab files in ListCabfiles.txt:" -ForegroundColor Green
-        $cabFiles | ForEach-Object { Write-Host $_ }
+        Write-Host "Found $($packageFiles.Count) .cab and .Appx files in ListCabfiles.txt:" -ForegroundColor Green
+        $packageFiles | ForEach-Object { Write-Host $_ }
     } else {
         Write-Error "ListCabfiles.txt not found at $listFilePath."
         "ListCabfiles.txt not found at $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
@@ -70,78 +70,94 @@ try {
     }
 
     # Download .cab files listed in ListCabfiles.txt, skipping existing files
-    Write-Host "`n[Step 2/5] Downloading .cab files from GitHub repository..." -ForegroundColor Yellow
-    foreach ($cabFile in $cabFiles) {
-        $outputPath = Join-Path $RepositoryPath $cabFile
-        if (Test-Path $outputPath) {
-            Write-Host "$cabFile already exists in $RepositoryPath. Skipping download." -ForegroundColor Green
-            "$cabFile already exists in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
-            continue
+    if (Test-Path $listFilePath) {
+        $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
+        if (-not $packageFiles) {
+            Write-Error "No .cab or .Appx files listed in ListCabfiles.txt or file is empty."
+            "No .cab or .Appx files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            exit 1
         }
-
-        $url = "$GitHubRepoUrl/$cabFile"
-        Write-Host "Downloading $cabFile from $url..."
-        try {
-            Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
-            Write-Host "Downloaded $cabFile successfully to $outputPath." -ForegroundColor Green
-            "Downloaded $cabFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        } catch {
-            Write-Warning "Failed to download $cabFile from $url. Error: $_"
-            "Failed to download $cabFile from $url. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        }
+        Write-Host "Found $($packageFiles.Count) .cab and .Appx files in ListCabfiles.txt:" -ForegroundColor Green
+        $packageFiles | ForEach-Object { Write-Host $_ }
+    } else {
+        Write-Error "ListCabfiles.txt not found at $listFilePath."
+        "ListCabfiles.txt not found at $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        exit 1
     }
 
+
     # Verify downloaded files
-    Write-Host "`n[Step 3/5] Verifying downloaded files..." -ForegroundColor Yellow
-    $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.cab"
+    Write-Host "`n[Step 4/6] Verifying downloaded files..." -ForegroundColor Yellow
+    $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.*" | Where-Object { $_.Extension -in ".cab", ".Appx" }
     if ($downloadedFiles.Count -gt 0) {
         Write-Host "Downloaded files:" -ForegroundColor Green
         $downloadedFiles | ForEach-Object { Write-Host $_.Name }
-        "Verified $($downloadedFiles.Count) .cab files in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        "Verified $($downloadedFiles.Count) .cab and .Appx files in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     } else {
-        Write-Warning "No .cab files were downloaded to $RepositoryPath."
-        "No .cab files found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        Write-Warning "No .cab or .Appx files were downloaded to $RepositoryPath."
+        "No .cab or .Appx files found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
 
-    # Install .cab files and check installation status
-    Write-Host "`n[Step 4/5] Installing .cab files from $RepositoryPath..." -ForegroundColor Yellow
-    foreach ($cabFile in $cabFiles) {
-        $filePath = Join-Path $RepositoryPath $cabFile
-        $packageName = [System.IO.Path]::GetFileNameWithoutExtension($cabFile)
+    # Install .cab and .Appx files and check installation status
+    Write-Host "`n[Step 5/6] Installing .cab and .Appx files from $RepositoryPath..." -ForegroundColor Yellow
+    foreach ($packageFile in $packageFiles) {
+        $filePath = Join-Path $RepositoryPath $packageFile
+        $packageName = [System.IO.Path]::GetFileNameWithoutExtension($packageFile)
 
-        # Check if package is already installed
-        $isInstalled = Get-WindowsPackage -Online | Where-Object { $_.PackageName -like "*$packageName*" -and $_.PackageState -eq "Installed" }
-        if ($isInstalled) {
-            Write-Host "$cabFile is already installed. Skipping." -ForegroundColor Green
-            "Package $cabFile is already installed at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        if (-not (Test-Path $filePath)) {
+            Write-Warning "$packageFile not found in $RepositoryPath."
+            "$packageFile not found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
             continue
         }
 
-        if (Test-Path $filePath) {
+        if ($packageFile -like "*.cab") {
+            # Check if .cab package is already installed
+            $isInstalled = Get-WindowsPackage -Online | Where-Object { $_.PackageName -like "*$packageName*" -and $_.PackageState -eq "Installed" }
+            if ($isInstalled) {
+                Write-Host "$packageFile is already installed. Skipping." -ForegroundColor Green
+                "Package $packageFile is already installed at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                continue
+            }
+
             $dismCommand = "DISM /Online /Add-Package /PackagePath:`"$filePath`" /NoRestart /LogPath:`"$logPath`""
             Write-Host "Executing: $dismCommand"
             $output = Invoke-Expression $dismCommand 2>&1
             $output | Out-File -FilePath $logPath -Append
             if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Failed to install $cabFile with error code $LASTEXITCODE."
+                Write-Warning "Failed to install $packageFile with error code $LASTEXITCODE."
                 if ($LASTEXITCODE -eq -2146498536) {
-                    Write-Warning "Error 0x80240028: $cabFile is not applicable to this Windows version."
+                    Write-Warning "Error 0x80240028: $packageFile is not applicable to this Windows version."
                 }
-                "Failed to install $cabFile with error code $LASTEXITCODE at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                "Failed to install $packageFile with error code $LASTEXITCODE at $(Get-Date)" | Out-File -FilePath $logPath -Append
             } else {
-                # Verify installation
+                # Verify .cab installation
                 $isInstalled = Get-WindowsPackage -Online | Where-Object { $_.PackageName -like "*$packageName*" -and $_.PackageState -eq "Installed" }
                 if ($isInstalled) {
-                    Write-Host "$cabFile installed and verified successfully." -ForegroundColor Green
-                    "Package $cabFile installed and verified at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                    Write-Host "$packageFile installed and verified successfully." -ForegroundColor Green
+                    "Package $packageFile installed and verified at $(Get-Date)" | Out-File -FilePath $logPath -Append
                 } else {
-                    Write-Warning "$cabFile installation completed but verification failed."
-                    "Package $cabFile installation completed but not found in installed packages at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                    Write-Warning "$packageFile installation completed but verification failed."
+                    "Package $packageFile installation completed but not found in installed packages at $(Get-Date)" | Out-File -FilePath $logPath -Append
                 }
             }
-        } else {
-            Write-Warning "$cabFile not found in $RepositoryPath."
-            "$cabFile not found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } elseif ($packageFile -like "*.Appx") {
+            # Check if .Appx package is already installed
+            $isAppxInstalled = Get-AppxPackage -Name "Microsoft.LanguageExperiencePacken-US" | Where-Object { $_.PackageFullName -like "*$packageName*" }
+            if ($isAppxInstalled) {
+                Write-Host "$packageFile is already installed. Skipping." -ForegroundColor Green
+                "Package $packageFile is already installed at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                continue
+            }
+
+            Write-Host "Installing $packageFile with Add-AppxPackage..."
+            try {
+                Add-AppxPackage -Path $filePath -ErrorAction Stop
+                Write-Host "$packageFile installed successfully." -ForegroundColor Green
+                "Package $packageFile installed successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            } catch {
+                Write-Warning "Failed to install $packageFile. Error: $_"
+                "Failed to install $packageFile. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            }
         }
     }
 
