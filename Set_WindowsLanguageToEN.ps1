@@ -296,13 +296,23 @@ try {
 
     ##############
     # Prompt for restart
-    Write-Host "`nConfiguration complete. Restart required." -ForegroundColor Cyan
+      Write-Host "`nConfiguration complete. Restart required to apply language and time zone changes." -ForegroundColor Cyan
     $choice = Read-Host "Restart now? (Y/N)"
     if ($choice -match "^[Yy]") {
         Write-Host "Restarting computer..." -ForegroundColor Yellow
+        # Delete the script file before restarting
+        $scriptPath = "Set_WindowsLanguageToEN.ps1"
+        if (Test-Path $scriptPath) {
+            Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
+            Write-Host "Deleted script file $scriptPath." -ForegroundColor Green
+            "Deleted script file $scriptPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } else {
+            Write-Warning "Script file $scriptPath not found for deletion."
+            "Script file $scriptPath not found for deletion at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        }
         Restart-Computer -Force
     } else {
-        Write-Host "Restart cancelled. Please restart manually." -ForegroundColor Yellow
+        Write-Host "Restart cancelled. Please restart manually to apply language and time zone changes." -ForegroundColor Yellow
     }
 }
 catch {
@@ -311,8 +321,5 @@ catch {
     exit 1
 }
 
-Write-Host "`nLanguage pack installation and welcome screen setup completed. Check $logPath for details." -ForegroundColor Cyan
-
-Stop-Transcript
-
+Write-Host "`nLanguage pack installation, time zone, and system language setup completed. Check $logPath for details." -ForegroundColor Cyan
 ##EOF
