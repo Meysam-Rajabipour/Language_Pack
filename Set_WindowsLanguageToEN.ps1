@@ -55,7 +55,7 @@ try {
 
     # Read .cab file names from ListCabfiles.txt
     if (Test-Path $listFilePath) {
-        $cabFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" } | ForEach-Object { $_.Trim() }
+        $cabFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
         if (-not $cabFiles) {
             Write-Error "No .cab files listed in ListCabfiles.txt or file is empty."
             "No .cab files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
