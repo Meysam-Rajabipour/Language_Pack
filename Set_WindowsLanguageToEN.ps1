@@ -1,15 +1,15 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V006
+# Versie: 1.0.9V008
 <#
 .SYNOPSIS
-    Downloads and applies en-US language pack, FoD .cab files, and LanguageExperiencePack .Appx from GitHub.
+    Downloads and applies en-US language pack, FoD .cab, .Appx, and .exe installer from GitHub.
 
 .DESCRIPTION
-    Pulls latest repository changes, downloads ListCabfiles.txt, downloads missing .cab and .Appx files,
-    installs packages, enables side-loading, installs optional features, applies administrative language
-    settings via XML, and verifies installations. Logs to C:\Temp\LanguageDownloadLog.txt.
+    Downloads ListCabfiles.txt, downloads missing .cab, .Appx, and .exe files, installs packages,
+    runs .exe installer silently, enables side-loading, installs optional features, applies
+    administrative language settings via XML, and verifies installations. Logs to C:\Temp\LanguageDownloadLog.txt.
 
 .PARAMETER RepositoryPath
     Local path to save and use files (default: C:\Temp\EN-US).
@@ -42,7 +42,6 @@ Write-Host "Starting file download and language pack installation for $LangCode.
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
 $listFilePath = Join-Path $Path1 "ListCabfiles.txt"
-$gitRepoPath = "C:\temp\git.repo"
 
 # Ensure log and download directories exist
 if (-not (Test-Path $Path1)) {
@@ -54,16 +53,13 @@ if (-not (Test-Path $RepositoryPath)) {
 
 try {
     # Enable side-loading for .Appx files
-    Write-Host "`n[Step 1/7] Enabling side-loading for .Appx files..." -ForegroundColor Yellow
+    Write-Host "`n[Step 1/6] Enabling side-loading for .Appx files..." -ForegroundColor Yellow
     New-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowAllTrustedApps -Value 1 -PropertyType DWORD -Force | Out-Null
     Write-Host "Side-loading enabled." -ForegroundColor Green
     "Side-loading enabled at $(Get-Date)" | Out-File -FilePath $logPath -Append
 
-    # Update local Git repository
-     Write-Host "`n[Step 2/7] Updating repository at $gitRepoPath..." -ForegroundColor Yellow
-    
     # Download ListCabfiles.txt
-    Write-Host "`n[Step 3/7] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
+    Write-Host "`n[Step 2/6] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
     $listUrl = "$GitHubRepoUrl/ListCabfiles.txt"
     try {
         Invoke-WebRequest -Uri $listUrl -OutFile $listFilePath -ErrorAction Stop
@@ -75,15 +71,15 @@ try {
         exit 1
     }
 
-    # Read .cab and .Appx file names from ListCabfiles.txt
+    # Read .cab, .Appx, and .exe file names from ListCabfiles.txt
     if (Test-Path $listFilePath) {
-        $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
+        $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" -or $_ -like "*.exe" } | ForEach-Object { $_.Trim() }
         if (-not $packageFiles) {
-            Write-Error "No .cab or .Appx files listed in ListCabfiles.txt or file is empty."
-            "No .cab or .Appx files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            Write-Error "No .cab, .Appx, or .exe files listed in ListCabfiles.txt or file is empty."
+            "No .cab, .Appx, or .exe files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
             exit 1
         }
-        Write-Host "Found $($packageFiles.Count) .cab and .Appx files in ListCabfiles.txt:" -ForegroundColor Green
+        Write-Host "Found $($packageFiles.Count) .cab, .Appx, and .exe files in ListCabfiles.txt:" -ForegroundColor Green
         $packageFiles | ForEach-Object { Write-Host $_ }
     } else {
         Write-Error "ListCabfiles.txt not found at $listFilePath."
@@ -91,8 +87,8 @@ try {
         exit 1
     }
 
-    # Download .cab and .Appx files, skipping existing ones
-    Write-Host "`n[Step 4/7] Downloading .cab and .Appx files from GitHub repository..." -ForegroundColor Yellow
+    # Download .cab, .Appx, and .exe files, skipping existing ones
+    Write-Host "`n[Step 3/6] Downloading .cab, .Appx, and .exe files from GitHub repository..." -ForegroundColor Yellow
     foreach ($packageFile in $packageFiles) {
         $outputPath = Join-Path $RepositoryPath $packageFile
         if (Test-Path $outputPath) {
@@ -114,19 +110,19 @@ try {
     }
 
     # Verify downloaded files
-    Write-Host "`n[Step 5/7] Verifying downloaded files..." -ForegroundColor Yellow
-    $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.*" | Where-Object { $_.Extension -in ".cab", ".Appx" }
+    Write-Host "`n[Step 4/6] Verifying downloaded files..." -ForegroundColor Yellow
+    $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.*" | Where-Object { $_.Extension -in ".cab", ".Appx", ".exe" }
     if ($downloadedFiles.Count -gt 0) {
         Write-Host "Downloaded files:" -ForegroundColor Green
         $downloadedFiles | ForEach-Object { Write-Host $_.Name }
-        "Verified $($downloadedFiles.Count) .cab and .Appx files in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        "Verified $($downloadedFiles.Count) .cab, .Appx, and .exe files in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     } else {
-        Write-Warning "No .cab or .Appx files were downloaded to $RepositoryPath."
-        "No .cab or .Appx files found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        Write-Warning "No .cab, .Appx, or .exe files were downloaded to $RepositoryPath."
+        "No .cab, .Appx, or .exe files found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
 
-    # Install .cab and .Appx files
-    Write-Host "`n[Step 6/7] Installing .cab and .Appx files from $RepositoryPath..." -ForegroundColor Yellow
+    # Install .cab, .Appx, and .exe files
+    Write-Host "`n[Step 5/6] Installing .cab, .Appx, and .exe files from $RepositoryPath..." -ForegroundColor Yellow
     foreach ($packageFile in $packageFiles) {
         $filePath = Join-Path $RepositoryPath $packageFile
         $packageName = [System.IO.Path]::GetFileNameWithoutExtension($packageFile)
@@ -185,6 +181,22 @@ try {
                 Write-Warning "Failed to install $packageFile. Error: $_"
                 "Failed to install $packageFile. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
             }
+        } elseif ($packageFile -like "*.exe") {
+            # Run .exe installer silently
+            Write-Host "Running $packageFile silently..."
+            try {
+                $process = Start-Process -FilePath $filePath -ArgumentList "/quiet /norestart" -NoNewWindow -PassThru -Wait
+                if ($process.ExitCode -eq 0) {
+                    Write-Host "$packageFile executed successfully." -ForegroundColor Green
+                    "Package $packageFile executed successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                } else {
+                    Write-Warning "Failed to execute $packageFile. Exit code: $($process.ExitCode)"
+                    "Failed to execute $packageFile. Exit code: $($process.ExitCode) at $(Get-Date)" | Out-File -FilePath $logPath -Append
+                }
+            } catch {
+                Write-Warning "Failed to execute $packageFile. Error: $_"
+                "Failed to execute $packageFile. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            }
         }
     }
 
@@ -209,7 +221,7 @@ try {
     }
 
     # Apply custom XML for administrative language settings
-    Write-Host "`n[Step 7/7] Applying administrative language settings via XML..." -ForegroundColor Yellow
+    Write-Host "`n[Step 6/6] Applying administrative language settings via XML..." -ForegroundColor Yellow
     $xmlPath = Join-Path $env:TEMP "en-US.xml"
     $XML = @"
 <gs:GlobalizationServices xmlns:gs="urn:longhornGlobalizationUnattend">
