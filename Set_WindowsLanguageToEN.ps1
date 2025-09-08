@@ -282,8 +282,8 @@ try {
             Set-Culture -CultureInfo $LangCode
             Set-WinHomeLocation -GeoId $PrimaryGeoID
             Set-WinUILanguageOverride -Language $LangCode
-        Write-Host ")()()()()()()()()()()()()()()()()()()()()"
-        Install-Language -language $LangCode -InstallLanguagePack -Confirm:$false
+        Write-Host "_-_-_-----__-----___--------__-__------_--"
+        Install-Language -language $LangCode # -InstallLanguagePack -Confirm:$false
        
     ### END SET PS Commands 
 
