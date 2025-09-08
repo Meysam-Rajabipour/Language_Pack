@@ -178,7 +178,7 @@ try {
     # Apply language settings
     Write-Host "`n[Step 5/5] Applying $LangCode language settings..." -ForegroundColor Yellow
     $langList = New-WinUserLanguageList -Language $LangCode
-    Set-WinUserLanguageList $langList -Force
+    Set-WinUserLanguageList $langList 
     Set-WinUILanguageOverride -Language $LangCode
     Set-WinSystemLocale -SystemLocale $LangCode
 
@@ -187,9 +187,9 @@ try {
     $choice = Read-Host "Restart now? (Y/N)"
     if ($choice -match "^[Yy]") {
         Write-Host "Restarting computer..." -ForegroundColor Yellow
-        Restart-Computer -Force
+        #Restart-Computer -Force
     } else {
-        Write-Host "Restart cancelled. Please restart manually." -ForegroundColor Yellow
+        #Write-Host "Restart cancelled. Please restart manually." -ForegroundColor Yellow
     }
 }
 catch {
