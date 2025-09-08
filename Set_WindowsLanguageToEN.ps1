@@ -296,12 +296,12 @@ try {
 
     ##############
     # Prompt for restart
-      Write-Host "`nConfiguration complete. Restart required to apply language and time zone changes." -ForegroundColor Cyan
+   Write-Host "`nConfiguration complete. Restart required to apply language and time zone changes." -ForegroundColor Cyan
     $choice = Read-Host "Restart now? (Y/N)"
+    $scriptPath = "Set_WindowsLanguageToEN.ps1"
     if ($choice -match "^[Yy]") {
         Write-Host "Restarting computer..." -ForegroundColor Yellow
         # Delete the script file before restarting
-        $scriptPath = "C:\Temp\Set_WindowsLanguageToEN.ps1"
         if (Test-Path $scriptPath) {
             Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
             Write-Host "Deleted script file $scriptPath." -ForegroundColor Green
@@ -310,13 +310,18 @@ try {
             Write-Warning "Script file $scriptPath not found for deletion."
             "Script file $scriptPath not found for deletion at $(Get-Date)" | Out-File -FilePath $logPath -Append
         }
-         
         Restart-Computer -Force
     } else {
-        Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
-            Write-Host "Deleteddd script file $scriptPath." -ForegroundColor Red
-            "Deleted script file $scriptPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
         Write-Host "Restart cancelled. Please restart manually to apply language and time zone changes." -ForegroundColor Yellow
+        # Delete the script file before exiting
+        if (Test-Path $scriptPath) {
+            Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
+            Write-Host "Deleted script file $scriptPath." -ForegroundColor Green
+            "Deleted script file $scriptPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } else {
+            Write-Warning "Script file $scriptPath not found for deletion."
+            "Script file $scriptPath not found for deletion at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        }
     }
 }
 catch {
