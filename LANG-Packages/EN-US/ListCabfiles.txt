@@ -1,3 +1,4 @@
+Microsoft.LanguageExperiencePacken-US_45000.21345.1.0_neutral__8wekyb3d8bbwe.Appx
 lp.cab
 Microsoft-Windows-Client-Language-Pack_x64_en-us.cab
 Microsoft-Windows-LanguageFeatures-Basic-en-us-Package~31bf3856ad364e35~amd64~~.cab
