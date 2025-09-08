@@ -35,7 +35,7 @@ param (
     [string]$GitHubRepoUrl = "https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US",
     [string]$LangCode = "en-US",
     [string]$PrimaryInputCode = "0409:00000409", # en-US
-    [string]$PrimaryGeoID = "176" # Netherlands
+    [string]$PrimaryGeoID = "244" # Netherlands
     
     )
 
