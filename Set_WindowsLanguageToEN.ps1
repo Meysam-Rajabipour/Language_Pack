@@ -259,7 +259,7 @@ try {
     </gs:UserLocale>
 </gs:GlobalizationServices>
 "@
-        New-Item -Path $xmlPath -ItemType File -Value $XML -Force | Out-Null
+        New-Item -Path $xmlPath -ItemType File -Value $XML -Force 
         Write-Host "Created XML file at $xmlPath."
         "Created XML file at $xmlPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
 
@@ -284,7 +284,7 @@ try {
             Set-WinHomeLocation -GeoId $PrimaryGeoID
             Set-WinUILanguageOverride -Language $LangCode
         Write-Host "_-_-_-----__-----___--------__-__------_--"
-        Install-Language -language $LangCode # -InstallLanguagePack -Confirm:$false
+        Install-Language -language $LangCode 
        
     ### END SET PS Commands 
 
@@ -294,7 +294,7 @@ try {
         ##  /Set time Zone to +100 Amsterdam
     ###########################################
 
-    ##############
+    ################
     # Prompt for restart
       # Install en-US language pack using Install-Language
     Write-Host "`nConfiguration complete. Restart required to apply language and time zone changes." -ForegroundColor Cyan
