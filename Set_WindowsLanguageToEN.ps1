@@ -1,7 +1,7 @@
 # requires -RunAsAdministrator
 # Meysam 08-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V009
+# Versie: 1.0.9V0010
 <#
 .SYNOPSIS
     Downloads and applies en-US language pack, FoD .cab, .Appx, and .exe installer from GitHub, and sets welcome screen to en-US.
@@ -40,6 +40,7 @@ param (
     )
 
 # --- SCRIPT START ---
+Strat-transcript  C:\TEMP\Process.log -verbose
 Write-Host "Starting file download, language pack installation, and welcome screen setup for $LangCode..." -ForegroundColor Cyan
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
@@ -237,7 +238,7 @@ try {
         "Set $LangCode as UI language for welcome screen at $(Get-Date)" | Out-File -FilePath $logPath -Append
 
         # Apply administrative language settings via XML
-        $xmlPath = Join-Path $env:TEMP "en-US.xml"
+        $xmlPath = Join-Path "C:\Temp" "en-US.xml"
         $XML = @"
 <gs:GlobalizationServices xmlns:gs="urn:longhornGlobalizationUnattend">
     <gs:UserList>
@@ -287,6 +288,12 @@ try {
        
     ### END SET PS Commands 
 
+    ##  \Set time Zone to +100 Amsterdam
+    tzutil /s "W. Europe Standard Time"
+    Write-Host "Time zone set to W. Europe Standard Time (Amsterdam)." -ForegroundColor Green
+        ##  /Set time Zone to +100 Amsterdam
+    ###########################################
+
     ##############
     # Prompt for restart
     Write-Host "`nConfiguration complete. Restart required." -ForegroundColor Cyan
@@ -305,4 +312,7 @@ catch {
 }
 
 Write-Host "`nLanguage pack installation and welcome screen setup completed. Check $logPath for details." -ForegroundColor Cyan
+
+Stop-Transcript
+
 ##EOF
