@@ -301,7 +301,7 @@ try {
     if ($choice -match "^[Yy]") {
         Write-Host "Restarting computer..." -ForegroundColor Yellow
         # Delete the script file before restarting
-        $scriptPath = "Set_WindowsLanguageToEN.ps1"
+        $scriptPath = "C:\Temp\Set_WindowsLanguageToEN.ps1"
         if (Test-Path $scriptPath) {
             Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
             Write-Host "Deleted script file $scriptPath." -ForegroundColor Green
