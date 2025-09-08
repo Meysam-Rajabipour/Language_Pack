@@ -34,9 +34,10 @@ param (
     [string]$RepositoryPath = "C:\Temp\EN-US",
     [string]$GitHubRepoUrl = "https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US",
     [string]$LangCode = "en-US",
-    [string]$PrimaryInputCode = "0409:00000409",
-    [string]$PrimaryGeoID = "176"
-)
+    [string]$PrimaryInputCode = "0409:00000409", # en-US
+    [string]$PrimaryGeoID = "176" # Netherlands
+    
+    )
 
 # --- SCRIPT START ---
 Write-Host "Starting file download, language pack installation, and welcome screen setup for $LangCode..." -ForegroundColor Cyan
@@ -281,6 +282,9 @@ try {
             Set-Culture -CultureInfo $LangCode
             Set-WinHomeLocation -GeoId $PrimaryGeoID
             Set-WinUILanguageOverride -Language $LangCode
+
+        Install-Language -language $LangCode -InstallLanguagePack -Confirm:$false
+       
     ### END SET PS Commands 
 
     ##############
