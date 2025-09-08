@@ -1,17 +1,17 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V004
+# Versie: 1.0.9V005
 <#
 .SYNOPSIS
-    Downloads en-US language pack and FoD .cab files from GitHub based on ListCabfiles.txt, skipping existing files.
+    Downloads and applies en-US language pack, FoD .cab files, and LanguageExperiencePack .Appx from GitHub.
 
 .DESCRIPTION
-    Downloads ListCabfiles.txt from GitHub, reads .cab file names, downloads only files not already in C:\Temp\EN-US,
+    Pulls latest repository changes, downloads ListCabfiles.txt, downloads missing .cab and .Appx files to C:\Temp\EN-US,
     installs and verifies packages, and applies en-US language settings. Logs to C:\Temp\LanguageDownloadLog.txt.
 
 .PARAMETER RepositoryPath
-    Local path to save and use .cab files (default: C:\Temp\EN-US).
+    Local path to save and use files (default: C:\Temp\EN-US).
 
 .PARAMETER GitHubRepoUrl
     Base URL of the GitHub repository (default: https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US).
@@ -26,11 +26,12 @@ param (
 )
 
 # --- SCRIPT START ---
-Write-Host "Starting .cab file download and language pack installation for $LangCode..." -ForegroundColor Cyan
+Write-Host "Starting file download and language pack installation for $LangCode..." -ForegroundColor Cyan
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
 $listFilePath = Join-Path $Path1 "ListCabfiles.txt"
-##TEST
+$gitRepoPath = "C:\temp\git.repo"
+
 # Ensure log and download directories exist
 if (-not (Test-Path $Path1)) {
     New-Item -Path $Path1 -ItemType Directory -Force
@@ -40,8 +41,26 @@ if (-not (Test-Path $RepositoryPath)) {
 }
 
 try {
+    # Update local Git repository to ensure latest ListCabfiles.txt
+    Write-Host "`n[Step 1/6] Updating local Git repository at $gitRepoPath..." -ForegroundColor Yellow
+    if (Test-Path $gitRepoPath) {
+        Push-Location $gitRepoPath
+        try {
+            git pull origin main 2>&1 | Out-File -FilePath $logPath -Append
+            Write-Host "Git repository updated successfully." -ForegroundColor Green
+            "Git repository updated successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } catch {
+            Write-Warning "Failed to update Git repository. Proceeding with existing files. Error: $_"
+            "Failed to update Git repository. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        }
+        Pop-Location
+    } else {
+        Write-Warning "Git repository not found at $gitRepoPath. Skipping Git update."
+        "Git repository not found at $gitRepoPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+    }
+
     # Download ListCabfiles.txt
-    Write-Host "`n[Step 1/5] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
+    Write-Host "`n[Step 2/6] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
     $listUrl = "$GitHubRepoUrl/ListCabfiles.txt"
     try {
         Invoke-WebRequest -Uri $listUrl -OutFile $listFilePath -ErrorAction Stop
@@ -53,7 +72,7 @@ try {
         exit 1
     }
 
-    # Read .cab file names from ListCabfiles.txt
+    # Read .cab and .Appx file names from ListCabfiles.txt
     if (Test-Path $listFilePath) {
         $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
         if (-not $packageFiles) {
@@ -69,22 +88,27 @@ try {
         exit 1
     }
 
-    # Download .cab files listed in ListCabfiles.txt, skipping existing files
-    if (Test-Path $listFilePath) {
-        $packageFiles = Get-Content -Path $listFilePath | Where-Object { $_ -like "*.cab" -or $_ -like "*.Appx" } | ForEach-Object { $_.Trim() }
-        if (-not $packageFiles) {
-            Write-Error "No .cab or .Appx files listed in ListCabfiles.txt or file is empty."
-            "No .cab or .Appx files listed in ListCabfiles.txt or file is empty at $(Get-Date)" | Out-File -FilePath $logPath -Append
-            exit 1
+    # Download .cab and .Appx files, skipping existing ones
+    Write-Host "`n[Step 3/6] Downloading .cab and .Appx files from GitHub repository..." -ForegroundColor Yellow
+    foreach ($packageFile in $packageFiles) {
+        $outputPath = Join-Path $RepositoryPath $packageFile
+        if (Test-Path $outputPath) {
+            Write-Host "$packageFile already exists in $RepositoryPath. Skipping download." -ForegroundColor Green
+            "$packageFile already exists in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            continue
         }
-        Write-Host "Found $($packageFiles.Count) .cab and .Appx files in ListCabfiles.txt:" -ForegroundColor Green
-        $packageFiles | ForEach-Object { Write-Host $_ }
-    } else {
-        Write-Error "ListCabfiles.txt not found at $listFilePath."
-        "ListCabfiles.txt not found at $listFilePath at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        exit 1
-    }
 
+        $url = "$GitHubRepoUrl/$packageFile"
+        Write-Host "Downloading $packageFile from $url..."
+        try {
+            Invoke-WebRequest -Uri $url -OutFile $outputPath -ErrorAction Stop
+            Write-Host "Downloaded $packageFile successfully to $outputPath." -ForegroundColor Green
+            "Downloaded $packageFile successfully to $outputPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } catch {
+            Write-Warning "Failed to download $packageFile from $url. Error: $_"
+            "Failed to download $packageFile from $url. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        }
+    }
 
     # Verify downloaded files
     Write-Host "`n[Step 4/6] Verifying downloaded files..." -ForegroundColor Yellow
@@ -192,9 +216,9 @@ try {
     }
 
     # Apply language settings
-    Write-Host "`n[Step 5/5] Applying $LangCode language settings..." -ForegroundColor Yellow
+    Write-Host "`n[Step 6/6] Applying $LangCode language settings..." -ForegroundColor Yellow
     $langList = New-WinUserLanguageList -Language $LangCode
-    Set-WinUserLanguageList $langList 
+    Set-WinUserLanguageList $langList -Force
     Set-WinUILanguageOverride -Language $LangCode
     Set-WinSystemLocale -SystemLocale $LangCode
 
@@ -203,9 +227,9 @@ try {
     $choice = Read-Host "Restart now? (Y/N)"
     if ($choice -match "^[Yy]") {
         Write-Host "Restarting computer..." -ForegroundColor Yellow
-        #Restart-Computer -Force
+        Restart-Computer -Force
     } else {
-        #Write-Host "Restart cancelled. Please restart manually." -ForegroundColor Yellow
+        Write-Host "Restart cancelled. Please restart manually." -ForegroundColor Yellow
     }
 }
 catch {
@@ -214,8 +238,5 @@ catch {
     exit 1
 }
 
-
-Install-language -language $LangCode
-#Install-languagefeatures -language $LangCode
 Write-Host "`nLanguage pack installation process completed. Check $logPath for details." -ForegroundColor Cyan
 ##EOF
