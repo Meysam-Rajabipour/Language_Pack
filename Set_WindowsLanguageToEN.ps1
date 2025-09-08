@@ -30,7 +30,7 @@ Write-Host "Starting .cab file download and language pack installation for $Lang
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
 $listFilePath = Join-Path $Path1 "ListCabfiles.txt"
-
+##TEST
 # Ensure log and download directories exist
 if (-not (Test-Path $Path1)) {
     New-Item -Path $Path1 -ItemType Directory -Force
