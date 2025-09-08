@@ -1,15 +1,16 @@
 # requires -RunAsAdministrator
-# Meysam 05-09-2025
+# Meysam 08-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V008
+# Versie: 1.0.9V009
 <#
 .SYNOPSIS
-    Downloads and applies en-US language pack, FoD .cab, .Appx, and .exe installer from GitHub.
+    Downloads and applies en-US language pack, FoD .cab, .Appx, and .exe installer from GitHub, and sets welcome screen to en-US.
 
 .DESCRIPTION
     Downloads ListCabfiles.txt, downloads missing .cab, .Appx, and .exe files, installs packages,
     runs .exe installer silently, enables side-loading, installs optional features, applies
-    administrative language settings via XML, and verifies installations. Logs to C:\Temp\LanguageDownloadLog.txt.
+    administrative language settings via XML, sets welcome screen to en-US, and verifies installations.
+    Logs to C:\Temp\LanguageDownloadLog.txt.
 
 .PARAMETER RepositoryPath
     Local path to save and use files (default: C:\Temp\EN-US).
@@ -38,7 +39,7 @@ param (
 )
 
 # --- SCRIPT START ---
-Write-Host "Starting file download and language pack installation for $LangCode..." -ForegroundColor Cyan
+Write-Host "Starting file download, language pack installation, and welcome screen setup for $LangCode..." -ForegroundColor Cyan
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
 $listFilePath = Join-Path $Path1 "ListCabfiles.txt"
@@ -220,10 +221,23 @@ try {
         "No additional optional features to install for $LangCode at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
 
-    # Apply custom XML for administrative language settings
-    Write-Host "`n[Step 6/6] Applying administrative language settings via XML..." -ForegroundColor Yellow
-    $xmlPath = Join-Path $env:TEMP "en-US.xml"
-    $XML = @"
+    # Apply language settings and set welcome screen to en-US
+    Write-Host "`n[Step 6/6] Applying language settings and setting welcome screen to $LangCode..." -ForegroundColor Yellow
+    try {
+        # Set language list to en-US as primary
+        $langList = New-WinUserLanguageList -Language $LangCode
+        Set-WinUserLanguageList $langList -Force -ErrorAction Stop
+        Write-Host "Set $LangCode as primary language for current user." -ForegroundColor Green
+        "Set $LangCode as primary language for current user at $(Get-Date)" | Out-File -FilePath $logPath -Append
+
+        # Set UI language override to en-US for welcome screen
+        Set-WinUILanguageOverride -Language $LangCode -ErrorAction Stop
+        Write-Host "Set $LangCode as UI language for welcome screen." -ForegroundColor Green
+        "Set $LangCode as UI language for welcome screen at $(Get-Date)" | Out-File -FilePath $logPath -Append
+
+        # Apply administrative language settings via XML
+        $xmlPath = Join-Path $env:TEMP "en-US.xml"
+        $XML = @"
 <gs:GlobalizationServices xmlns:gs="urn:longhornGlobalizationUnattend">
     <gs:UserList>
         <gs:User UserID="Current" CopySettingsToDefaultUserAcct="true" CopySettingsToSystemAcct="true"/> 
@@ -243,20 +257,33 @@ try {
     </gs:UserLocale>
 </gs:GlobalizationServices>
 "@
-    New-Item -Path $xmlPath -ItemType File -Value $XML -Force | Out-Null
-    Write-Host "Created XML file at $xmlPath."
-    "Created XML file at $xmlPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        New-Item -Path $xmlPath -ItemType File -Value $XML -Force | Out-Null
+        Write-Host "Created XML file at $xmlPath."
+        "Created XML file at $xmlPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
 
-    $process = Start-Process -FilePath Control.exe -ArgumentList "intl.cpl,,/f:`"$xmlPath`"" -NoNewWindow -PassThru -Wait
-    if ($process.ExitCode -eq 0) {
-        Write-Host "Administrative language settings applied successfully." -ForegroundColor Green
-        "Administrative language settings applied successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
-    } else {
-        Write-Warning "Failed to apply administrative language settings. Exit code: $($process.ExitCode)"
-        "Failed to apply administrative language settings. Exit code: $($process.ExitCode) at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        $process = Start-Process -FilePath Control.exe -ArgumentList "intl.cpl,,/f:`"$xmlPath`"" -NoNewWindow -PassThru -Wait
+        if ($process.ExitCode -eq 0) {
+            Write-Host "Administrative language settings applied successfully." -ForegroundColor Green
+            "Administrative language settings applied successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        } else {
+            Write-Warning "Failed to apply administrative language settings. Exit code: $($process.ExitCode)"
+            "Failed to apply administrative language settings. Exit code: $($process.ExitCode) at $(Get-Date)" | Out-File -FilePath $logPath -Append
+        }
+        Remove-Item -Path $xmlPath -Force -ErrorAction SilentlyContinue
+    } catch {
+        Write-Warning "Failed to apply language settings or welcome screen configuration. Error: $_"
+        "Failed to apply language settings or welcome screen configuration. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
-    Remove-Item -Path $xmlPath -Force -ErrorAction SilentlyContinue
+###########################################
+    ### SET PS Commands   
+         Set-WinSystemLocale -SystemLocale $LangCode
+         Set-WinUserLanguageList -LanguageList $LangCode -Force 
+            Set-Culture -CultureInfo $LangCode
+            Set-WinHomeLocation -GeoId $PrimaryGeoID
+            Set-WinUILanguageOverride -Language $LangCode
+    ### END SET PS Commands 
 
+    ##############
     # Prompt for restart
     Write-Host "`nConfiguration complete. Restart required." -ForegroundColor Cyan
     $choice = Read-Host "Restart now? (Y/N)"
@@ -273,5 +300,5 @@ catch {
     exit 1
 }
 
-Write-Host "`nLanguage pack installation process completed. Check $logPath for details." -ForegroundColor Cyan
+Write-Host "`nLanguage pack installation and welcome screen setup completed. Check $logPath for details." -ForegroundColor Cyan
 ##EOF
