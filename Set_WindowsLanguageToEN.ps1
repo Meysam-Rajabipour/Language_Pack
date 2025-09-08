@@ -282,7 +282,7 @@ try {
             Set-Culture -CultureInfo $LangCode
             Set-WinHomeLocation -GeoId $PrimaryGeoID
             Set-WinUILanguageOverride -Language $LangCode
-
+        Write-Host ")()()()()()()()()()()()()()()()()()()()()"
         Install-Language -language $LangCode -InstallLanguagePack -Confirm:$false
        
     ### END SET PS Commands 
