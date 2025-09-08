@@ -40,7 +40,7 @@ param (
     )
 
 # --- SCRIPT START ---
-Start-Transcript  C:\TEMP\Process.log -verbose
+Start-Transcript  "C:\TEMP\Process.log"  -verbose
 Write-Host "Starting file download, language pack installation, and welcome screen setup for $LangCode..." -ForegroundColor Cyan
 $Path1 = "C:\Temp"
 $logPath = Join-Path $Path1 "LanguageDownloadLog.txt"
