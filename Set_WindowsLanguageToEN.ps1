@@ -310,11 +310,12 @@ try {
             Write-Warning "Script file $scriptPath not found for deletion."
             "Script file $scriptPath not found for deletion at $(Get-Date)" | Out-File -FilePath $logPath -Append
         }
-         Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
-            Write-Host "Deleteddd script file $scriptPath." -ForegroundColor Red
-            "Deleted script file $scriptPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+         
         Restart-Computer -Force
     } else {
+        Remove-Item -Path $scriptPath -Force -ErrorAction SilentlyContinue
+            Write-Host "Deleteddd script file $scriptPath." -ForegroundColor Red
+            "Deleted script file $scriptPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
         Write-Host "Restart cancelled. Please restart manually to apply language and time zone changes." -ForegroundColor Yellow
     }
 }
