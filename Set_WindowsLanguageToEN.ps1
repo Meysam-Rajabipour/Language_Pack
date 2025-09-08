@@ -1,14 +1,15 @@
 # requires -RunAsAdministrator
 # Meysam 05-09-2025
 # Log File in C:\Temp
-# Versie: 1.0.9V005
+# Versie: 1.0.9V006
 <#
 .SYNOPSIS
     Downloads and applies en-US language pack, FoD .cab files, and LanguageExperiencePack .Appx from GitHub.
 
 .DESCRIPTION
-    Pulls latest repository changes, downloads ListCabfiles.txt, downloads missing .cab and .Appx files to C:\Temp\EN-US,
-    installs and verifies packages, and applies en-US language settings. Logs to C:\Temp\LanguageDownloadLog.txt.
+    Pulls latest repository changes, downloads ListCabfiles.txt, downloads missing .cab and .Appx files,
+    installs packages, enables side-loading, installs optional features, applies administrative language
+    settings via XML, and verifies installations. Logs to C:\Temp\LanguageDownloadLog.txt.
 
 .PARAMETER RepositoryPath
     Local path to save and use files (default: C:\Temp\EN-US).
@@ -16,13 +17,24 @@
 .PARAMETER GitHubRepoUrl
     Base URL of the GitHub repository (default: https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US).
 
+.PARAMETER LangCode
+    Language code to apply (default: en-US).
+
+.PARAMETER PrimaryInputCode
+    Input language ID (default: 0409:00000409 for en-US).
+
+.PARAMETER PrimaryGeoID
+    GeoID for location (default: 176 for en-US).
+
 .EXAMPLE
     .\DownloadAndApply-LanguageCabs.ps1
 #>
 param (
     [string]$RepositoryPath = "C:\Temp\EN-US",
     [string]$GitHubRepoUrl = "https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US",
-    [string]$LangCode = "en-US"
+    [string]$LangCode = "en-US",
+    [string]$PrimaryInputCode = "0409:00000409",
+    [string]$PrimaryGeoID = "176"
 )
 
 # --- SCRIPT START ---
@@ -41,26 +53,17 @@ if (-not (Test-Path $RepositoryPath)) {
 }
 
 try {
-    # Update local Git repository to ensure latest ListCabfiles.txt
-    Write-Host "`n[Step 1/6] Updating local Git repository at $gitRepoPath..." -ForegroundColor Yellow
-    if (Test-Path $gitRepoPath) {
-        Push-Location $gitRepoPath
-        try {
-            git pull origin main 2>&1 | Out-File -FilePath $logPath -Append
-            Write-Host "Git repository updated successfully." -ForegroundColor Green
-            "Git repository updated successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        } catch {
-            Write-Warning "Failed to update Git repository. Proceeding with existing files. Error: $_"
-            "Failed to update Git repository. Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        }
-        Pop-Location
-    } else {
-        Write-Warning "Git repository not found at $gitRepoPath. Skipping Git update."
-        "Git repository not found at $gitRepoPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
-    }
+    # Enable side-loading for .Appx files
+    Write-Host "`n[Step 1/7] Enabling side-loading for .Appx files..." -ForegroundColor Yellow
+    New-ItemProperty -Path HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock -Name AllowAllTrustedApps -Value 1 -PropertyType DWORD -Force | Out-Null
+    Write-Host "Side-loading enabled." -ForegroundColor Green
+    "Side-loading enabled at $(Get-Date)" | Out-File -FilePath $logPath -Append
 
+    # Update local Git repository
+     Write-Host "`n[Step 2/7] Updating repository at $gitRepoPath..." -ForegroundColor Yellow
+    
     # Download ListCabfiles.txt
-    Write-Host "`n[Step 2/6] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
+    Write-Host "`n[Step 3/7] Downloading ListCabfiles.txt from $GitHubRepoUrl..." -ForegroundColor Yellow
     $listUrl = "$GitHubRepoUrl/ListCabfiles.txt"
     try {
         Invoke-WebRequest -Uri $listUrl -OutFile $listFilePath -ErrorAction Stop
@@ -89,7 +92,7 @@ try {
     }
 
     # Download .cab and .Appx files, skipping existing ones
-    Write-Host "`n[Step 3/6] Downloading .cab and .Appx files from GitHub repository..." -ForegroundColor Yellow
+    Write-Host "`n[Step 4/7] Downloading .cab and .Appx files from GitHub repository..." -ForegroundColor Yellow
     foreach ($packageFile in $packageFiles) {
         $outputPath = Join-Path $RepositoryPath $packageFile
         if (Test-Path $outputPath) {
@@ -111,7 +114,7 @@ try {
     }
 
     # Verify downloaded files
-    Write-Host "`n[Step 4/6] Verifying downloaded files..." -ForegroundColor Yellow
+    Write-Host "`n[Step 5/7] Verifying downloaded files..." -ForegroundColor Yellow
     $downloadedFiles = Get-ChildItem -Path $RepositoryPath -Filter "*.*" | Where-Object { $_.Extension -in ".cab", ".Appx" }
     if ($downloadedFiles.Count -gt 0) {
         Write-Host "Downloaded files:" -ForegroundColor Green
@@ -122,8 +125,8 @@ try {
         "No .cab or .Appx files found in $RepositoryPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
 
-    # Install .cab and .Appx files and check installation status
-    Write-Host "`n[Step 5/6] Installing .cab and .Appx files from $RepositoryPath..." -ForegroundColor Yellow
+    # Install .cab and .Appx files
+    Write-Host "`n[Step 6/7] Installing .cab and .Appx files from $RepositoryPath..." -ForegroundColor Yellow
     foreach ($packageFile in $packageFiles) {
         $filePath = Join-Path $RepositoryPath $packageFile
         $packageName = [System.IO.Path]::GetFileNameWithoutExtension($packageFile)
@@ -185,42 +188,62 @@ try {
         }
     }
 
-    # Install font group
-    Write-Host "`nInstalling font group for $LangCode..." -ForegroundColor Yellow
-    $langGroup = if ($LangCode -eq "en-US") { "Latn" } else { "" }
-    if ($langGroup) {
-        $fontCapability = "Language.Fonts.$langGroup~~~und-$langGroup~0.0.1.0"
-        $isFontInstalled = Get-WindowsCapability -Online | Where-Object { $_.Name -eq $fontCapability -and $_.State -eq "Installed" }
-        if ($isFontInstalled) {
-            Write-Host "Font group $langGroup is already installed. Skipping." -ForegroundColor Green
-            "Font group $langGroup is already installed at $(Get-Date)" | Out-File -FilePath $logPath -Append
-        } else {
-            $dismCommand = "DISM /Online /Add-Capability /CapabilityName:$fontCapability /Source:`"$RepositoryPath`" /NoRestart /LogPath:`"$logPath`""
-            Write-Host "Executing: $dismCommand"
-            $output = Invoke-Expression $dismCommand 2>&1
-            $output | Out-File -FilePath $logPath -Append
-            if ($LASTEXITCODE -ne 0) {
-                Write-Warning "Failed to install font group $langGroup with error code $LASTEXITCODE."
-                "Failed to install font group $langGroup with error code $LASTEXITCODE at $(Get-Date)" | Out-File -FilePath $logPath -Append
-            } else {
-                $isFontInstalled = Get-WindowsCapability -Online | Where-Object { $_.Name -eq $fontCapability -and $_.State -eq "Installed" }
-                if ($isFontInstalled) {
-                    Write-Host "Font group $langGroup installed and verified successfully." -ForegroundColor Green
-                    "Font group $langGroup installed and verified at $(Get-Date)" | Out-File -FilePath $logPath -Append
-                } else {
-                    Write-Warning "Font group $langGroup installation completed but verification failed."
-                    "Font group $langGroup installation completed but not found in installed capabilities at $(Get-Date)" | Out-File -FilePath $logPath -Append
-                }
+    # Install optional features for the primary language
+    Write-Host "`nInstalling optional features for $LangCode..." -ForegroundColor Yellow
+    $capabilities = Get-WindowsCapability -Online | Where-Object { $_.Name -like "*$LangCode*" -and $_.State -ne "Installed" }
+    if ($capabilities) {
+        foreach ($capability in $capabilities) {
+            Write-Host "Installing capability $($capability.Name)..."
+            try {
+                Add-WindowsCapability -Online -Name $capability.Name -ErrorAction Stop
+                Write-Host "Capability $($capability.Name) installed successfully." -ForegroundColor Green
+                "Capability $($capability.Name) installed successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+            } catch {
+                Write-Warning "Failed to install capability $($capability.Name). Error: $_"
+                "Failed to install capability $($capability.Name). Error: $_ at $(Get-Date)" | Out-File -FilePath $logPath -Append
             }
         }
+    } else {
+        Write-Host "No additional optional features to install for $LangCode." -ForegroundColor Green
+        "No additional optional features to install for $LangCode at $(Get-Date)" | Out-File -FilePath $logPath -Append
     }
 
-    # Apply language settings
-    Write-Host "`n[Step 6/6] Applying $LangCode language settings..." -ForegroundColor Yellow
-    $langList = New-WinUserLanguageList -Language $LangCode
-    Set-WinUserLanguageList $langList -Force
-    Set-WinUILanguageOverride -Language $LangCode
-    Set-WinSystemLocale -SystemLocale $LangCode
+    # Apply custom XML for administrative language settings
+    Write-Host "`n[Step 7/7] Applying administrative language settings via XML..." -ForegroundColor Yellow
+    $xmlPath = Join-Path $env:TEMP "en-US.xml"
+    $XML = @"
+<gs:GlobalizationServices xmlns:gs="urn:longhornGlobalizationUnattend">
+    <gs:UserList>
+        <gs:User UserID="Current" CopySettingsToDefaultUserAcct="true" CopySettingsToSystemAcct="true"/> 
+    </gs:UserList>
+    <gs:LocationPreferences> 
+        <gs:GeoID Value="$PrimaryGeoID"/>
+    </gs:LocationPreferences>
+    <gs:MUILanguagePreferences>
+        <gs:MUILanguage Value="$LangCode"/>
+    </gs:MUILanguagePreferences>
+    <gs:SystemLocale Name="$LangCode"/>
+    <gs:InputPreferences>
+        <gs:InputLanguageID Action="add" ID="$PrimaryInputCode" Default="true"/>
+    </gs:InputPreferences>
+    <gs:UserLocale>
+        <gs:Locale Name="$LangCode" SetAsCurrent="true" ResetAllSettings="false"/>
+    </gs:UserLocale>
+</gs:GlobalizationServices>
+"@
+    New-Item -Path $xmlPath -ItemType File -Value $XML -Force | Out-Null
+    Write-Host "Created XML file at $xmlPath."
+    "Created XML file at $xmlPath at $(Get-Date)" | Out-File -FilePath $logPath -Append
+
+    $process = Start-Process -FilePath Control.exe -ArgumentList "intl.cpl,,/f:`"$xmlPath`"" -NoNewWindow -PassThru -Wait
+    if ($process.ExitCode -eq 0) {
+        Write-Host "Administrative language settings applied successfully." -ForegroundColor Green
+        "Administrative language settings applied successfully at $(Get-Date)" | Out-File -FilePath $logPath -Append
+    } else {
+        Write-Warning "Failed to apply administrative language settings. Exit code: $($process.ExitCode)"
+        "Failed to apply administrative language settings. Exit code: $($process.ExitCode) at $(Get-Date)" | Out-File -FilePath $logPath -Append
+    }
+    Remove-Item -Path $xmlPath -Force -ErrorAction SilentlyContinue
 
     # Prompt for restart
     Write-Host "`nConfiguration complete. Restart required." -ForegroundColor Cyan
