@@ -1,5 +1,5 @@
 # requires -RunAsAdministrator
-# Meysam 08-09-2025
+# Meysam 09-09-2025
 # Log File in C:\Temp
 # Versie: 1.0.9V0010
 <#
@@ -25,7 +25,7 @@
     Input language ID (default: 0409:00000409 for en-US).
 
 .PARAMETER PrimaryGeoID
-    GeoID for location (default: 176 for en-US).
+    GeoID for location (default: 244 for en-US).
 
 .EXAMPLE
     .\DownloadAndApply-LanguageCabs.ps1
@@ -35,7 +35,7 @@ param (
     [string]$GitHubRepoUrl = "https://raw.githubusercontent.com/Meysam-Rajabipour/Language_Pack/main/LANG-Packages/EN-US",
     [string]$LangCode = "en-US",
     [string]$PrimaryInputCode = "0409:00000409", # en-US
-    [string]$PrimaryGeoID = "244" # Netherlands
+    [string]$PrimaryGeoID = "244" 
     
     )
 
@@ -278,20 +278,21 @@ try {
     }
 ###########################################
     ### SET PS Commands   
+    Write-Host "_-_-_-----__-----___--------__-__------_--"
+        Install-Language -language $LangCode -CopyToSettings 
          Set-WinSystemLocale -SystemLocale $LangCode
          Set-WinUserLanguageList -LanguageList $LangCode -Force 
             Set-Culture -CultureInfo $LangCode
             Set-WinHomeLocation -GeoId $PrimaryGeoID
             Set-WinUILanguageOverride -Language $LangCode
-        Write-Host "_-_-_-----__-----___--------__-__------_--"
-        Install-Language -language $LangCode 
+        
        
     ### END SET PS Commands 
 
     ##  \Set time Zone to +100 Amsterdam
     tzutil /s "W. Europe Standard Time"
     Write-Host "Time zone set to W. Europe Standard Time (Amsterdam)." -ForegroundColor Green
-        ##  /Set time Zone to +100 Amsterdam
+        ##  /Set time Zone to +1.00 Amsterdam
     ###########################################
 
     ################
